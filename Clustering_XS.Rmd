@@ -1,0 +1,1006 @@
+---
+title: "R Notebook"
+---
+
+
+```{r}
+library(openxlsx)
+a <- openxlsx::read.xlsx("XS_cluster_CHARS2016 hp clustering features PCG_210915.xlsx")
+b <- openxlsx::read.xlsx("XS_cluster_PCG MajorMinor for each hospital_210922.xlsx")
+c <- openxlsx::read.xlsx("XS_hospital level.xlsx")
+
+c$hospital_combine <- paste(c$hospital_level,c$hospital,sep = "_")
+FT <- merge(a, b, by = "hospital", all.x = TRUE)
+FT <- merge(FT, c[,c("hospital_combine","hospital_name")], by.x = "hospital", by.y = "hospital_combine", all.x = TRUE)
+
+FT <- FT[,c(1,2,ncol(FT),3:(ncol(FT)-1))]
+
+rm(a)
+rm(b)
+rm(c)
+
+FT[is.na(FT)] <- 0
+
+#which(colnames(FT) == "Not_grouped")
+#FT <- FT[,-which(colnames(FT) == "Not_grouped")]
+
+colnames(FT)[36]
+colnames(FT)[37]
+colnames(FT)[171]
+colnames(FT)[172]
+```
+
+
+Filter out the hospitals with major procedures for trauma admissions >= 50
+```{r}
+library(dplyr)
+FT <- FT %>% filter(num_tr_MP_sum >= 50)
+```
+
+
+# subgroup PCG
+```{r}
+library(openxlsx)
+a <- openxlsx::read.xlsx("XS_cluster_CHARS2016 hp clustering features PCG_210915.xlsx")
+b <- openxlsx::read.xlsx("XS_cluster_GS PCG for each hospital_210909.xlsx")
+c <- openxlsx::read.xlsx("XS_hospital level.xlsx")
+
+c$hospital_combine <- paste(c$hospital_level,c$hospital,sep = "_")
+FT <- merge(a, b, by = "hospital", all.x = TRUE)
+FT <- merge(FT, c[,c("hospital_combine","hospital_name")], by.x = "hospital", by.y = "hospital_combine", all.x = TRUE)
+FT <- FT[,c(1,2,ncol(FT),3:(ncol(FT)-1))]
+
+rm(a)
+rm(b)
+rm(c)
+
+
+FT[is.na(FT)] <- 0
+
+library(dplyr)
+FT <- FT %>% filter(num_tr_MP_sum > 0)
+
+#which(colnames(FT) == "Not_grouped")
+#FT <- FT[,-which(colnames(FT) == "Not_grouped")]
+
+colnames(FT)[3]
+colnames(FT)[36]
+colnames(FT)[37]
+
+FT <- FT[,-c(3:36)]
+#FT <- FT[-1,]
+
+FT.clst <- FT[,c(3:ncol(FT))]
+```
+
+
+
+#```{r}
+for (i in 35:378){
+  name <- paste("p.",colnames(FT)[i],sep="")
+  FT[[name]] <- FT[,i] / FT$num_tr_MP_sum
+}
+rm(name)
+
+FT[is.na(FT)] <- 0
+#```
+
+
+Change the procedure complexity groups from raw counts to pp / MP
+```{r}
+FT[,c(37:171)] <- FT[,c(37:171)] / FT$num_tr_MP_sum
+FT[is.na(FT)] <- 0
+```
+
+
+#```{r}
+FT[,c(35:378)] <- FT[,c(35:378)] / max(FT[,c(35:378)])
+FT[is.na(FT)] <- 0
+#```
+
+Only PCG
+```{r}
+FT <- FT[,c(1:3,37:171)]
+```
+
+```{r}
+write.xlsx(FT, "clustering features.xlsx")
+```
+```{r}
+FT.clst <- FT[,c(4:ncol(FT))]
+```
+
+
+Features for PCG in each subgroup
+```{r}
+library(openxlsx)
+num = 34
+a <- openxlsx::read.xlsx("XS_GScluster_CHARS2016 hp clustering features PCG_210804.xlsx")
+b <- openxlsx::read.xlsx("XS_GScluster_PCG for each hospital_210804.xlsx")
+FTsg <- merge(FT[,1:num], b, by = "hospital", all.x = TRUE)
+colnames(FTsg)[(num+1):ncol(FTsg)] <- paste(colnames(FTsg)[(num+1):ncol(FTsg)],"_G",sep="")
+FTsg <- merge(FTsg, a[,c("hospital","num_tr_MP_GS_sum")], by = "hospital", all.x = TRUE)
+FTsg[,(num+1):(ncol(FTsg)-1)] <- FTsg[,(num+1):(ncol(FTsg)-1)] / FTsg[,ncol(FTsg)]
+FTsg <- FTsg[,-ncol(FTsg)]
+
+num <- ncol(FTsg)
+print(num)
+a <- openxlsx::read.xlsx("XS_Orthocluster_CHARS2016 hp clustering features PCG_210804.xlsx")
+b <- openxlsx::read.xlsx("XS_Orthocluster_PCG for each hospital_210804.xlsx")
+FTsg <- merge(FTsg, b, by = "hospital", all.x = TRUE)
+colnames(FTsg)[(num+1):ncol(FTsg)] <- paste(colnames(FTsg)[(num+1):ncol(FTsg)],"_O",sep="")
+FTsg <- merge(FTsg, a[,c("hospital","num_tr_MP_Ortho_sum")], by = "hospital", all.x = TRUE)
+FTsg[,(num+1):(ncol(FTsg)-1)] <- FTsg[,(num+1):(ncol(FTsg)-1)] / FTsg[,ncol(FTsg)]
+FTsg <- FTsg[,-ncol(FTsg)]
+
+num <- ncol(FTsg)
+print(num)
+a <- openxlsx::read.xlsx("XS_Neucluster_CHARS2016 hp clustering features PCG_210804.xlsx")
+b <- openxlsx::read.xlsx("XS_Neucluster_PCG for each hospital_210804.xlsx")
+FTsg <- merge(FTsg, b, by = "hospital", all.x = TRUE)
+colnames(FTsg)[(num+1):ncol(FTsg)] <- paste(colnames(FTsg)[(num+1):ncol(FTsg)],"_N",sep="")
+FTsg <- merge(FTsg, a[,c("hospital","num_tr_MP_Neu_sum")], by = "hospital", all.x = TRUE)
+FTsg[,(num+1):(ncol(FTsg)-1)] <- FTsg[,(num+1):(ncol(FTsg)-1)] / FTsg[,ncol(FTsg)]
+FTsg <- FTsg[,-ncol(FTsg)]
+
+num <- ncol(FTsg)
+print(num)
+a <- openxlsx::read.xlsx("XS_Urocluster_CHARS2016 hp clustering features PCG_210804.xlsx")
+b <- openxlsx::read.xlsx("XS_Urocluster_PCG for each hospital_210804.xlsx")
+FTsg <- merge(FTsg, b, by = "hospital", all.x = TRUE)
+colnames(FTsg)[(num+1):ncol(FTsg)] <- paste(colnames(FTsg)[(num+1):ncol(FTsg)],"_U",sep="")
+FTsg <- merge(FTsg, a[,c("hospital","num_tr_MP_Uro_sum")], by = "hospital", all.x = TRUE)
+FTsg[,(num+1):(ncol(FTsg)-1)] <- FTsg[,(num+1):(ncol(FTsg)-1)] / FTsg[,ncol(FTsg)]
+FTsg <- FTsg[,-ncol(FTsg)]
+
+num <- ncol(FTsg)
+print(num)
+a <- openxlsx::read.xlsx("XS_Subcluster_CHARS2016 hp clustering features PCG_210804.xlsx")
+b <- openxlsx::read.xlsx("XS_Subcluster_PCG for each hospital_210804.xlsx")
+FTsg <- merge(FTsg, b, by = "hospital", all.x = TRUE)
+colnames(FTsg)[(num+1):ncol(FTsg)] <- paste(colnames(FTsg)[(num+1):ncol(FTsg)],"_S",sep="")
+FTsg <- merge(FTsg, a[,c("hospital","num_tr_MP_Sub_sum")], by = "hospital", all.x = TRUE)
+FTsg[,(num+1):(ncol(FTsg)-1)] <- FTsg[,(num+1):(ncol(FTsg)-1)] / FTsg[,ncol(FTsg)]
+FTsg <- FTsg[,-ncol(FTsg)]
+
+num <- ncol(FTsg)
+print(num)
+a <- openxlsx::read.xlsx("XS_Othcluster_CHARS2016 hp clustering features PCG_210804.xlsx")
+b <- openxlsx::read.xlsx("XS_Othcluster_PCG for each hospital_210804.xlsx")
+FTsg <- merge(FTsg, b, by = "hospital", all.x = TRUE)
+colnames(FTsg)[(num+1):ncol(FTsg)] <- paste(colnames(FTsg)[(num+1):ncol(FTsg)],"_Ot",sep="")
+FTsg <- merge(FTsg, a[,c("hospital","num_tr_MP_Oth_sum")], by = "hospital", all.x = TRUE)
+FTsg[,(num+1):(ncol(FTsg)-1)] <- FTsg[,(num+1):(ncol(FTsg)-1)] / FTsg[,ncol(FTsg)]
+FTsg <- FTsg[,-ncol(FTsg)]
+
+rm(a)
+rm(b)
+
+FTsg[is.na(FTsg)] <- 0
+```
+
+```{r}
+write.xlsx(FTsg, "clustering features.xlsx")
+```
+```{r}
+FT.clst <- FTsg[,c(4:ncol(FTsg))]
+```
+
+
+Feature standardization: standardize to [0, 1] range
+```{r}
+meanstd_stdzt <- function(x) {
+  z <- (x-mean(x)) / (sd(x))
+  return(z)
+}
+```
+
+```{r}
+minmax_stdzt <- function(x) {
+  std <- (x-min(x)) / (max(x)-min(x))
+  return(std)
+}
+```
+
+```{r}
+scalar_stdzt <- function(x) {
+  z <- x / sqrt(sum(x^2))
+  return(z)
+  }
+```
+
+```{r}
+for (i in 1:ncol(FT.clst)){
+  FT.clst[,i] <- meanstd_stdzt(FT.clst[,i])
+}
+
+FT.clst[is.na(FT.clst)] <- 0
+```
+
+```{r}
+for (i in 1:ncol(FT.clst)){
+  FT.clst[,i] <- minmax_stdzt(FT.clst[,i])
+}
+
+FT.clst[is.na(FT.clst)] <- 0
+```
+
+
+```{r}
+FT.clst$num_tr_adm <- minmax_stdzt(FT.clst$num_tr_adm)
+FT.clst$med_tr_age <- minmax_stdzt(FT.clst$med_tr_age)
+FT.clst$med_nt_age <- minmax_stdzt(FT.clst$med_nt_age)
+FT.clst$med_minISS <- minmax_stdzt(FT.clst$med_minISS)
+FT.clst$num_tr_MP_sum <- minmax_stdzt(FT.clst$num_tr_MP_sum)
+FT.clst$num_nt_MP_sum <- minmax_stdzt(FT.clst$num_nt_MP_sum)
+
+FT.clst[is.na(FT.clst)] <- 0
+```
+
+Standardize procedure complexity groups by min_max
+```{r}
+#for (i in 31:461){
+#  FT.clst[,i] <- minmax_stdzt(FT.clst[,i])
+#}
+
+#FT.clst[is.na(FT.clst)] <- 0
+```
+
+
+
+
+PCA
+```{r}
+library(FactoMineR)
+library(factoextra)
+library(standardize)
+
+pca <- PCA(FT.clst, scale.unit = FALSE, ncp = 40, graph = FALSE)
+
+# Extract the score for the PCs for each individual
+data <- data.frame(row.names = row.names(FT))
+for (i in 1:5){
+  data[,i] <- get_pca_ind(pca)$coord[,i]
+}
+FT.pca <- data
+
+
+library(factoextra)
+get_eigenvalue(pca)
+
+fviz_eig(pca, addlabels = TRUE, ncp = 5)
+
+# Contributions of variables to PCi
+fviz_contrib(pca, choice = "var", axes = 1, top = 10)
+fviz_contrib(pca, choice = "var", axes = 2, top = 10)
+fviz_contrib(pca, choice = "var", axes = 3, top = 10)
+fviz_contrib(pca, choice = "var", axes = 4, top = 10)
+fviz_contrib(pca, choice = "var", axes = 5, top = 10)
+fviz_contrib(pca, choice = "var", axes = 6, top = 10)
+fviz_contrib(pca, choice = "var", axes = 7, top = 10)
+fviz_contrib(pca, choice = "var", axes = 8, top = 10)
+fviz_contrib(pca, choice = "var", axes = 9, top = 10)
+fviz_contrib(pca, choice = "var", axes = 10, top = 10)
+fviz_contrib(pca, choice = "var", axes = 11, top = 10)
+fviz_contrib(pca, choice = "var", axes = 12, top = 10)
+fviz_contrib(pca, choice = "var", axes = 13, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 14, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 15, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 16, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 17, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 18, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 19, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 20, top = 5)
+#fviz_contrib(pca, choice = "var", axes = 21, top = 5)
+#fviz_contrib(pca, choice = "var", axes = 22, top = 5)
+#fviz_contrib(pca, choice = "var", axes = 23, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 24, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 25, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 26, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 27, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 28, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 29, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 30, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 31, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 32, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 33, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 34, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 35, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 36, top = 10)
+#Pfviz_contrib(pca, choice = "var", axes = 37, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 38, top = 10)
+#fviz_contrib(pca, choice = "var", axes = 39, top = 10)
+
+
+# Color variables (admission type - levels) by their contribution values
+fviz_pca_var(pca, col.var = "contrib",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             repel = TRUE # Avoid text overlapping
+             )
+
+# Color individuals (major ortho proc codes) by their cos2 values
+# cos2 values: quality on the factor map
+fviz_pca_ind(pca, col.ind = "cos2", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE # Avoid text overlapping (slow if many points)
+             )
+
+#rm(pca)
+```
+
+
+
+
+optimal number for clustering
+```{r}
+# decide the optimal k for k-means
+library(factoextra)
+
+# Elbow method
+fviz_nbclust(FT.pca, kmeans, method = "wss") +
+  geom_vline(xintercept = 2, linetype = 2) +
+  labs(subtitle = "Elbow method")
+
+# Silhouette method
+fviz_nbclust(FT.clst, kmeans, method = "silhouette", k.max = 10)+
+  labs(subtitle = "Silhouette method")
+```
+
+```{r}
+unique(FT$level == FTsg$level)
+```
+
+K-means clustering
+```{r}
+library(xlsx)
+#Cdata <- FT.pca
+Cdata <- FT.clst
+data <- FT.clst
+level <- FT$level
+kMeans <- kmeans(Cdata, 4)
+#kMeans <- kmeans(Cdata, Cdata[c(1,5,2,3,7,96),])
+print(kMeans$size)
+
+# silhouette score
+library(cluster)
+ss <- silhouette(kMeans$cluster, dist(Cdata))
+mean(ss[,3])
+
+write.xlsx(data.frame(kMeans$cluster),"clustering result.xlsx")
+
+# Plot the clustered data
+library(Rtsne)
+# Executing the algorithm on curated data
+tsne <- Rtsne(data, dims = 2, perplexity = 15, verbose=TRUE, max_iter = 500, 
+              check_duplicates = FALSE)
+# Plotting
+# Assign shapes to levels
+level[which(level == "1")] <- 16
+level[which(level == "2")] <- 15
+level[which(level == "3")] <- 17
+level[which(level == "4")] <- 8
+level[which(level == "5")] <- 3
+level[which(level == "non-trauma")] <- 4
+level <- as.numeric(level)
+# Assign colors to clustering groups
+cluster <- kMeans$cluster
+cluster[which(cluster == 7)] <- "lightslateblue"
+cluster[which(cluster == 8)] <- "deeppink4"
+cluster[which(cluster == 9)] <- "Orange"
+#cluster[which(cluster == 10)] <- "Brown"
+#cluster[which(cluster == 11)] <- "gold3"
+#cluster[which(cluster == 12)] <- "dimgrey"
+
+#?xyplot
+library(lattice)
+xyplot(tsne$Y[,2] ~ tsne$Y[,1], 
+       xlab = "tSNE_x", ylab = "tSNE_y",
+       main = "WA TC/non-TC clustering", 
+       pch = level, col = cluster, 
+       key = list(space = "right", adj=1,
+                  text = list(c("level I","level II","level III",
+                                "level IV","level V","non-trauma"), cex=1),
+                  points = list(pch = c(16,15,17,8,3,4), col = c(1,1,1,1,1,1)),
+#                  text = list(c("cluster 1","cluster 2"), cex=1),
+#                  points = list(pch = 15, col = c(1,2,0,0,0,0))
+                  text = list(c("cluster 1","cluster 2","cluster 3","cluster 4"), cex=1),
+                  points = list(pch = 15, 
+                                col = c(1,2,3,4,0,0))
+#                  text = list(c("cluster 1","cluster 2","cluster 3",
+#                                "cluster 4","cluster 5","cluster 6"), cex=1),
+#                  points = list(pch = 15, 
+#                                col = c(1,2,3,4,5,6))
+                  ))
+
+#legend("topright", legend = unique(level), pch = unique(level))
+```
+
+
+
+```{r}
+library(openxlsx)
+cluster1.1.2 <- openxlsx::read.xlsx("XS_result_clustering features and cluster summary_210915.xlsx", sheet = "0916_1-1-2 result")
+cluster1.1.2 <- cluster1.1.2$kMeans.cluster
+
+cluster1.2.2 <- openxlsx::read.xlsx("XS_result_clustering features and cluster summary_210915.xlsx", sheet = "0916_1-2-2 result")
+cluster1.2.2 <- cluster1.2.2$kMeans.cluster
+
+cluster1.3.2 <- openxlsx::read.xlsx("XS_result_clustering features and cluster summary_210915.xlsx", sheet = "0916_1-3-2 result")
+cluster1.3.2 <- cluster1.3.2$kMeans.cluster
+```
+
+```{r}
+#install.packages("fossil")
+library(fossil)
+
+rand.index(cluster1.1.2, cluster1.2.2)
+rand.index(cluster1.1.2, cluster1.3.2)
+rand.index(cluster1.2.2, cluster1.3.2)
+#adj.rand.index(cluster1, cluster2)
+```
+
+
+
+
+Cluter for both continuous and categorical variables
+```{r}
+library(openxlsx)
+FT <- openxlsx::read.xlsx("XS_result_clustering features and cluster summary_210915.xlsx", sheet = "0916_2 feature")
+FT$label_GS <- as.factor(FT$label_GS)
+FT$label_Ortho <- as.factor(FT$label_Ortho)
+FT$label_Neu <- as.factor(FT$label_Neu)
+FT$label_Uro <- as.factor(FT$label_Uro)
+FT$label_Sub <- as.factor(FT$label_Sub)
+FT$label_Oth <- as.factor(FT$label_Oth)
+
+FT[is.na(FT)] <- 0
+
+FT.clst <- FT[,c(4:ncol(FT))]
+```
+
+```{r}
+library(cluster)
+FT.gower <- daisy(FT.clst, metric = "gower")
+```
+
+```{r}
+silhouette <- c()
+silhouette = c(silhouette, NA)
+for(i in 2:10){
+  pam_clusters = pam(as.matrix(FT.gower),
+                     diss = TRUE,
+                     k = i)
+  silhouette = c(silhouette, pam_clusters$silinfo$avg.width)
+}
+
+plot(1:10, silhouette, xlab = "Clusters", ylab = "Silhouette Width")
+lines(1:10, silhouette)
+
+rm(pam_clusters)
+rm(silhouette)
+```
+
+```{r}
+library(cluster)
+pam_FT = pam(FT.gower, diss = TRUE, k = 6)
+#FT[pam_german$medoids, ]
+
+library(dplyr)
+pam_summary <- FT.clst %>%
+  mutate(cluster = pam_FT$clustering) %>%
+  group_by(cluster) %>%
+  do(cluster_summary = summary(.))
+#pam_summary$cluster_summary[[1]]
+
+library(xlsx)
+write.xlsx(data.frame(pam_FT$clustering),"clustering result.xlsx")
+
+library(plyr)
+plyr::count(pam_FT$clustering)
+
+library(Rtsne)
+tsne <- Rtsne(FT.gower, dims = 2, perplexity = 15, verbose=TRUE, max_iter = 500, 
+              check_duplicates = FALSE)
+# Plotting
+# Assign shapes to levels
+level <- FT$level
+level[which(level == "1")] <- 16
+level[which(level == "2")] <- 15
+level[which(level == "3")] <- 17
+level[which(level == "4")] <- 8
+level[which(level == "5")] <- 3
+level[which(level == "non-trauma")] <- 4
+level <- as.numeric(level)
+# Assign colors to clustering groups
+cluster <- pam_FT$clustering
+cluster[which(cluster == 7)] <- "lightslateblue"
+#cluster[which(cluster == 8)] <- "dimgrey"
+#cluster[which(cluster == 9)] <- "Brown"
+#cluster[which(cluster == 10)] <- "Orange"
+#cluster[which(cluster == 11)] <- "gold3"
+#cluster[which(cluster == 12)] <- "deeppink4"
+
+#?xyplot
+library(lattice)
+xyplot(tsne$Y[,2] ~ tsne$Y[,1], 
+       xlab = "tSNE_x", ylab = "tSNE_y",
+       main = "WA TC/non-TC clustering", 
+       pch = level, col = cluster, 
+       key = list(space = "right", adj=1,
+                  text = list(c("level I","level II","level III",
+                                "level IV","level V","non-trauma"), cex=1),
+                  points = list(pch = c(16,15,17,8,3,4), col = c(1,1,1,1,1,1)),
+#                  text = list(c("cluster 1","cluster 2"), cex=1),
+#                  points = list(pch = 15, col = c(1,2,0,0,0,0))
+                  text = list(c("cluster 1","cluster 2","cluster 3",
+                                 "cluster 4","cluster 5","cluster 6"), cex=1),
+                  points = list(pch = 15, col = c(1,2,3,4,5,6))
+                  ))
+
+
+#library(Rtsne)
+#library(ggplot2)
+#tsne_object <- Rtsne(FT.gower, is_distance = TRUE)
+#tsne_df <- tsne_object$Y %>%
+#  data.frame() %>%
+#  setNames(c("X", "Y")) %>%
+#  mutate(cluster = factor(pam_FT$clustering))
+#ggplot(aes(x = X, y = Y), data = tsne_df) +
+#  geom_point(aes(color = cluster))
+```
+
+```{r}
+a <- cbind(data.frame(pam_summary$cluster_summary[[1]]),
+           data.frame(pam_summary$cluster_summary[[2]]),
+           data.frame(pam_summary$cluster_summary[[3]]),
+           data.frame(pam_summary$cluster_summary[[4]]),
+           data.frame(pam_summary$cluster_summary[[5]]),
+           data.frame(pam_summary$cluster_summary[[6]]))
+```
+
+```{r}
+a <- cbind(data.frame(pam_summary$cluster_summary[[1]]),
+           data.frame(pam_summary$cluster_summary[[2]]),
+           data.frame(pam_summary$cluster_summary[[3]]),
+           data.frame(pam_summary$cluster_summary[[4]]),
+           data.frame(pam_summary$cluster_summary[[5]]),
+           data.frame(pam_summary$cluster_summary[[6]]))
+#write.xlsx(a,"clustering summary.xlsx")
+```
+
+```{r}
+rm(pam_FT)
+rm(pam_summary)
+rm(tsne_df)
+rm(tsne)
+rm(tsne_object)
+```
+
+
+Test significant difference for the features across the clusters
+```{r}
+a <- FT$pp_nt_MP_GS
+#hist(a)
+#test residuals normality for ANOVA results to see if ANOVA can be used
+#normality with larger p (e.g., >= 0.05)
+#shapiro.test(a)
+if (shapiro.test(a)$p.value >= 0.05){
+  print("Y for normality")
+  # Conduct ANOVA test
+  #If p-value is less than the significance level 0.05: there are significant differences between the groups highlighted with "*" in the model summary.
+  ANOVA <- aov(a ~ pam_FT$clustering)
+  summary(ANOVA)
+} else {
+  print("N for normality")
+  # Conduct Kruskal-Wallis test if ANOVA residuals not normal
+  #If p-value is less than the significance level 0.05: there are significant differences between the treatment groups
+  KW <- kruskal.test(a ~ pam_FT$clustering)
+  if (KW$p.value <= 0.05){
+    print("Y for sig. var. by KW")
+    } else {
+      print("N for sig. var. by KW")
+      }
+}
+```
+
+
+
+```{r}
+# Test sigificant difference for categorical variables across the levels
+
+# Conduct Chi-square Test on Homogeneity
+#If p-value is less than the significance level 0.05:  there are significant differences between the treatment groups
+chiS_ts <- data.frame("level" = c("1", "2", "3", "4", "5", "non-trauma"),"A" = numeric(6),"B" = numeric(6))
+chiS_ts$A[[1]] <- CRTPCO_H[[1]]$num_trauma
+chiS_ts$B[[1]] <- CRTPCO_H[[1]]$num_nontrauma
+chiS_ts$A[[2]] <- mean(CRTPCO_H[[2]]$num_trauma)
+chiS_ts$B[[2]] <- mean(CRTPCO_H[[2]]$num_nontrauma)
+for (i in 3:6){
+  chiS_ts$A[[i]] <- median(CRTPCO_H[[i]]$num_trauma)
+  chiS_ts$B[[i]] <- median(CRTPCO_H[[i]]$num_nontrauma)
+}
+print(chisq.test(chiS_ts[-1]))
+#print(chisq.test(chiS_ts[-1], simulate.p.value = TRUE))
+
+```
+
+
+
+Try tree-based model on the cluter results based on the features
+```{r}
+library(rpart.plot)
+mod.tree <- rpart(pam_FT$clustering ~ ., FT.clst)
+rpart.plot(mod.tree)
+```
+
+
+
+
+
+------------------------------------------------------------------------------------
+
+20211005 with dummy variables and PAM
+
+Set 1 - step 1
+subgroup clustering (PAM without standardization, PCA)
+```{r}
+library(openxlsx)
+a <- openxlsx::read.xlsx("XS_cluster_CHARS2016 hp clustering features PCG_211104.xlsx")
+b <- openxlsx::read.xlsx("XS_cluster_PCG Neu for each hospital_211104.xlsx")
+c <- openxlsx::read.xlsx("XS_hospital level.xlsx")
+
+c$hospital_combine <- paste(c$hospital_level,c$hospital,sep = "_")
+FT <- merge(a, b, by = "hospital", all.x = TRUE)
+FT <- merge(FT, c[,c("hospital_combine","hospital_name")], by.x = "hospital", by.y = "hospital_combine", all.x = TRUE)
+FT <- FT[,c(1,2,ncol(FT),3:(ncol(FT)-1))]
+
+rm(a)
+rm(b)
+rm(c)
+
+FT[is.na(FT)] <- 0
+
+library(dplyr)
+FT <- FT %>% filter(num_tr_MP_sum > 0)
+
+colnames(FT)[3]
+colnames(FT)[4]
+colnames(FT)[36]
+colnames(FT)[37]
+
+FT <- FT[,-c(4:36)]
+
+FT.clst <- FT[,c(4:ncol(FT))]
+```
+```{r}
+file.remove("clustering features.xlsx")
+write.xlsx(FT, "clustering features.xlsx")
+```
+
+
+Set 1 - step 2
+clustering with subgroup labels and other features (PAM w standardization, PCA)
+```{r}
+library(openxlsx)
+a <- openxlsx::read.xlsx("XS_cluster_CHARS2016 hp clustering features PCG SI_211209.xlsx")
+c <- openxlsx::read.xlsx("XS_hospital level.xlsx")
+
+c$hospital_combine <- paste(c$hospital_level,c$hospital,sep = "_")
+FT <- merge(a, c[,c("hospital_combine","hospital_name")], by.x = "hospital", by.y = "hospital_combine", all.x = TRUE)
+FT <- FT[,c(1,2,ncol(FT),3:(ncol(FT)-1))]
+
+rm(a)
+rm(c)
+
+FT[is.na(FT)] <- 0
+
+library(dplyr)
+FT <- FT %>% filter(num_tr_MP_sum > 0)
+
+file.remove("clustering features.xlsx")
+write.xlsx(FT, "clustering features.xlsx")
+```
+(manually add labels to the feature table)
+```{r}
+library(openxlsx)
+FT <- openxlsx::read.xlsx("XS_result_PAM clustering SI_220106.xlsx", sheet = "set1_feature")
+
+#Feature transformation (categorical to dummy variables)
+library(fastDummies)
+FT <- dummy_cols(FT, select_columns = c("GS_label","Ortho_label","Neu_label",
+                                        "Uro_label","Sub_label"))
+
+FT.clst <- FT[,c(4:ncol(FT))]
+FT.clst <- FT.clst[,-c(1,2,3,4,5)]
+FT.clst$hp_SDI <- FT.clst$hp_SDI / 100
+```
+```{r}
+file.remove("clustering features.xlsx")
+write.xlsx(FT, "clustering features.xlsx")
+```
+
+
+Set 2
+clustering with % PCG and other features (PAM w standardization, PCA)
+```{r}
+library(openxlsx)
+a <- openxlsx::read.xlsx("XS_cluster_CHARS2016 hp clustering features PCG SI_211209.xlsx")
+b <- openxlsx::read.xlsx("XS_cluster_PCG for each hospital_211104.xlsx")
+c <- openxlsx::read.xlsx("XS_hospital level.xlsx")
+
+c$hospital_combine <- paste(c$hospital_level,c$hospital,sep = "_")
+FT <- merge(a, b, by = "hospital", all.x = TRUE)
+FT <- merge(FT, c[,c("hospital_combine","hospital_name")], by.x = "hospital", by.y = "hospital_combine", all.x = TRUE)
+
+FT <- FT[,c(1,2,ncol(FT),3:(ncol(FT)-1))]
+
+rm(a)
+rm(b)
+rm(c)
+
+FT[is.na(FT)] <- 0
+
+colnames(FT)[39]
+colnames(FT)[40]
+colnames(FT)[477]
+colnames(FT)[478]
+
+library(dplyr)
+FT <- FT %>% filter(num_tr_MP_sum >= 50)
+FT[,c(40:477)] <- FT[,c(40:477)] / FT$num_tr_MP_sum
+FT[is.na(FT)] <- 0
+
+FT.clst <- FT[,c(4:ncol(FT))]
+FT.clst$hp_SDI <- FT.clst$hp_SDI / 100
+```
+```{r}
+file.remove("clustering features.xlsx")
+write.xlsx(FT, "clustering features.xlsx")
+```
+
+
+Set 3
+clustering with % or # Major/Minor PCG (PAM w PCA)
+```{r}
+library(openxlsx)
+a <- openxlsx::read.xlsx("XS_cluster_CHARS2016 hp clustering features PCG_211104.xlsx")
+b <- openxlsx::read.xlsx("XS_cluster_PCGMajorMinor for each hospital_211104.xlsx")
+c <- openxlsx::read.xlsx("XS_hospital level.xlsx")
+
+c$hospital_combine <- paste(c$hospital_level,c$hospital,sep = "_")
+FT <- merge(a, b, by = "hospital", all.x = TRUE)
+FT <- merge(FT, c[,c("hospital_combine","hospital_name")], by.x = "hospital", by.y = "hospital_combine", all.x = TRUE)
+
+FT <- FT[,c(1,2,ncol(FT),3:(ncol(FT)-1))]
+
+rm(a)
+rm(b)
+rm(c)
+
+FT[is.na(FT)] <- 0
+
+colnames(FT)[36]
+colnames(FT)[37]
+colnames(FT)[166]
+colnames(FT)[167]
+
+library(dplyr)
+FT <- FT %>% filter(num_tr_MP_sum >= 50)
+
+#FT[,c(37:166)] <- FT[,c(37:166)] / FT$num_tr_MP_sum
+FT[is.na(FT)] <- 0
+
+# Get only PCG
+FT <- FT[,c(1:3,37:166)]
+
+FT.clst <- FT[,c(4:ncol(FT))]
+```
+
+```{r}
+file.remove("clustering features.xlsx")
+write.xlsx(FT, "clustering features.xlsx")
+```
+
+
+
+
+
+
+
+
+
+Feature standardization
+```{r}
+minmax_stdzt <- function(x) {
+  std <- (x-min(x)) / (max(x)-min(x))
+  return(std)
+}
+
+FT.clst$num_tr_adm <- minmax_stdzt(FT.clst$num_tr_adm)
+FT.clst$med_tr_age <- minmax_stdzt(FT.clst$med_tr_age)
+FT.clst$med_nt_age <- minmax_stdzt(FT.clst$med_nt_age)
+FT.clst$med_minISS <- minmax_stdzt(FT.clst$med_minISS)
+FT.clst$num_tr_MP_sum <- minmax_stdzt(FT.clst$num_tr_MP_sum)
+FT.clst$num_nt_MP_sum <- minmax_stdzt(FT.clst$num_nt_MP_sum)
+
+FT.clst[is.na(FT.clst)] <- 0
+```
+
+
+
+PCA
+```{r}
+library(FactoMineR)
+library(factoextra)
+library(standardize)
+
+pca <- PCA(FT.clst, scale.unit = FALSE, ncp = 40, graph = FALSE)
+
+# Extract the score for the PCs for each individual
+data <- data.frame(row.names = row.names(FT))
+for (i in 1:1){
+  data[,i] <- get_pca_ind(pca)$coord[,i]
+}
+FT.pca <- data
+
+get_eigenvalue(pca)
+
+fviz_eig(pca, addlabels = TRUE, ncp = 10)
+
+#View(pca$var$contrib)
+
+# Contributions of variables to PCi
+# For a given dimension, any row/column with a contribution above the reference line could be considered as important in contributing to the dimension.
+fviz_contrib(pca, choice = "var", axes = 1, top = 40)
+fviz_contrib(pca, choice = "var", axes = 2, top = 30)
+fviz_contrib(pca, choice = "var", axes = 3, top = 30)
+fviz_contrib(pca, choice = "var", axes = 4, top = 30)
+fviz_contrib(pca, choice = "var", axes = 5, top = 30)
+fviz_contrib(pca, choice = "var", axes = 6, top = 35)
+fviz_contrib(pca, choice = "var", axes = 7, top = 30)
+fviz_contrib(pca, choice = "var", axes = 8, top = 35)
+fviz_contrib(pca, choice = "var", axes = 9, top = 40)
+fviz_contrib(pca, choice = "var", axes = 10, top = 20)
+#fviz_contrib(pca, choice = "var", axes = 11, top = 22)
+```
+
+
+
+
+Find the optimal number of the clustering
+```{r}
+library(factoextra)
+# Silhouette method
+fviz_nbclust(FT.pca, cluster::pam, method = "silhouette", k.max = 10)+
+  labs(subtitle = "Silhouette method")
+```
+
+```{r}
+Cdata = FT.pca
+
+library(cluster)
+pam_FT = pam(Cdata, k = 10, metric = "euclidean")
+
+library(dplyr)
+pam_summary <- FT.clst %>%
+  mutate(cluster = pam_FT$clustering) %>%
+  group_by(cluster) %>%
+  do(cluster_summary = summary(.))
+
+# silhouette score
+ss <- silhouette(pam_FT$clustering, dist(Cdata))
+mean(ss[,3])
+
+library(xlsx)
+write.xlsx(data.frame(pam_FT$clustering),"clustering result.xlsx")
+
+library(plyr)
+plyr::count(pam_FT$clustering)
+
+library(Rtsne)
+tsne <- Rtsne(FT.clst, dims = 2, perplexity = 15, verbose=TRUE, max_iter = 500, 
+              check_duplicates = FALSE)
+# Plotting
+# Assign shapes to levels
+level <- FT$level
+level[which(level == "1")] <- 16
+level[which(level == "2")] <- 15
+level[which(level == "3")] <- 17
+level[which(level == "4")] <- 8
+level[which(level == "5")] <- 3
+level[which(level == "non-trauma")] <- 4
+level <- as.numeric(level)
+# Assign colors to clustering groups
+cluster <- pam_FT$clustering
+cluster[which(cluster == 4)] <- "blue"
+cluster[which(cluster == 5)] <- "gold3"
+cluster[which(cluster == 6)] <- "purple"
+cluster[which(cluster == 7)] <- 5
+cluster[which(cluster == 8)] <- "deeppink4"
+cluster[which(cluster == 9)] <- "Orange"
+cluster[which(cluster == 10)] <- "Grey"
+
+library(lattice)
+xyplot(tsne$Y[,2] ~ tsne$Y[,1], 
+       xlab = "tSNE_x", ylab = "tSNE_y",
+       main = "WA TC/non-TC clustering", 
+       pch = level, col = cluster, 
+       key = list(space = "right", adj=1,
+                  text = list(c("level I","level II","level III",
+                                "level IV","level V","non-trauma"), cex=1),
+                  points = list(pch = c(16,15,17,8,3,4), col = c(1,1,1,1,1,1,0,0,0,0)),
+                  text = list(c("cluster 1","cluster 2","cluster 3",
+                                "cluster 4","cluster 5","cluster 6",
+                                "cluster 7","cluster 8","cluster 9","cluster 10"), cex=1),
+                  points = list(pch = 15, col = c(1,2,3,"blue","gold3","purple",5,"deeppink4","Orange","Grey"))
+                  ))
+```
+
+
+Summary of the contributing features
+```{r}
+library(dplyr)
+#set 1
+FT.summary <- FT[,9:ncol(FT)] %>%
+  mutate(cluster = pam_FT$clustering)
+
+FT.summary <- 
+  aggregate(FT.summary[,c(3,4,5,8,11,16:27,31,32,33,36:53)],
+            list(FT.summary$cluster), mean)
+
+write.xlsx(FT.summary, "clustering summary.xlsx")
+```
+```{r}
+#set 2
+FT.summary <- FT[,4:ncol(FT)] %>%
+  mutate(cluster = pam_FT$clustering)
+
+#FT.summary <-
+#  aggregate(FT.summary[,c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,16,17,18,19,20,21,22,23,24,26,28,29,30,31,32,33,144,145,150,155,171,172,178,227,354,454)], list(FT.summary$cluster), mean)
+
+FT.summary <-
+  aggregate(FT.summary[,c(1:9,11:27,29,31:36,147,148,153,158,174,175,181,230,357,457)],list(FT.summary$cluster), mean)
+
+file.remove("clustering summary.xlsx")
+write.xlsx(FT.summary, "clustering summary.xlsx")
+```
+```{r}
+#set 3-1
+FT.summary <- FT[,4:ncol(FT)] %>%
+  mutate(cluster = pam_FT$clustering)
+
+FT.summary <-
+  aggregate(FT.summary[,c(1,4,5,6,16,17,19,22,32,33,34,35,38,39,40,41,44,48,51,52,63,64,68,69,71,74,94,95,97,115,117,125,127,129,130)],list(FT.summary$cluster), mean)
+
+write.xlsx(FT.summary, "clustering summary.xlsx")
+```
+```{r}
+#set 3-2
+FT.summary <- FT[,4:ncol(FT)] %>%
+  mutate(cluster = pam_FT$clustering)
+
+FT.summary <-
+  aggregate(FT.summary[,c(3,16,19,25,33,38,39,40,41,44,51,69,71,95,99,105,115,117,125,129)],
+            list(FT.summary$cluster), mean)
+
+write.xlsx(FT.summary, "clustering summary.xlsx")
+```
+
+
+
+```{r}
+# a: set 1 N5 without social index
+a <- c(1,1,2,3,1,2,4,1,5,3,4,4,4,2,5,4,4,5,4,2,4,5,3,5,4,5,5,2,5,5,4,4,4,4,4,4,4,4,4,4,5,4,5,5,4,4,4,4,4,4,4,4,4,4,4,4,4,5,4,4,2,2,2,4,4,2,4,5,4)
+b <- pam_FT$clustering
+library(fossil)
+rand.index(a, b)
+```
+
+```{r}
+# a: set 2 N7 without social index
+a <- c(1,2,2,2,2,2,3,2,4,2,4,5,4,5,5,4,4,2,5,5,4,4,5,4,2,2,5,2,6,4,4,6,6,4,6,4,4,6,4,4,4,5,4,5,4,6,2,7,2,3,2,5,5)
+b <- pam_FT$clustering
+library(fossil)
+rand.index(a, b)
+```
+
